@@ -9,7 +9,7 @@ import { Question, Quiz } from "../types";
 interface QuizScreenProps {
   showNetworkWarning: boolean;
   currentQuestion: number;
-  getCurrentAnswer: () => number | null;
+  getCurrentAnswer: () => number | null | undefined;
   selectedQuiz: Quiz;
   goToQuestion: (index: number) => void;
   setShowSubmitConfirm: (show: boolean) => void;
