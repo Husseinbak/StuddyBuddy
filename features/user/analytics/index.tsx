@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useState } from "react";
 import {
@@ -12,6 +13,7 @@ import {
   Pie,
   Cell,
   Legend,
+  PieLabelRenderProps,
 } from "recharts";
 import {
   BarChartIcon,
@@ -19,6 +21,7 @@ import {
   TrendingUpIcon,
   ClockIcon,
 } from "lucide-react";
+
 const AnalyticsPage = () => {
   const [timeRange, setTimeRange] = useState("month");
   // Sample data for score progression
@@ -208,9 +211,16 @@ const AnalyticsPage = () => {
                   fill="#8884d8"
                   paddingAngle={5}
                   dataKey="value"
-                  label={({ name, percent }) =>
-                    `${name}: ${(percent * 100).toFixed(0)}%`
-                  }
+                  label={(props: PieLabelRenderProps) => {
+                    const percent = (props as any).percent as
+                      | number
+                      | undefined;
+                    const name = (props.payload as any)?.name;
+
+                    return percent && name
+                      ? `${name}: ${(percent * 100).toFixed(0)}%`
+                      : null;
+                  }}
                 >
                   {difficultyData.map((entry, index) => (
                     <Cell

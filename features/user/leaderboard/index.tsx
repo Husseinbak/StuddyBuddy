@@ -1,12 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import {
-  SearchIcon,
-  FilterIcon,
-  TrophyIcon,
-  AwardIcon,
-  StarIcon,
-} from "lucide-react";
+import { SearchIcon, TrophyIcon, AwardIcon, StarIcon } from "lucide-react";
 const LeaderboardPage = () => {
   const [courseFilter, setCourseFilter] = useState("all");
   const [difficultyFilter, setDifficultyFilter] = useState("all");

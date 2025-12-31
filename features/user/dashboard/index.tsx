@@ -4,7 +4,6 @@ import {
   BrainIcon,
   UsersIcon,
   BarChartIcon,
-  TrophyIcon,
   ArrowRightIcon,
 } from "lucide-react";
 import Link from "next/link";
