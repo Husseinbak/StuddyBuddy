@@ -1,11 +1,7 @@
+"use client";
+
 import React, { useState } from "react";
-import {
-  CalendarIcon,
-  MessageCircleIcon,
-  ClockIcon,
-  StarIcon,
-  SearchIcon,
-} from "lucide-react";
+import { CalendarIcon, ClockIcon, StarIcon, SearchIcon } from "lucide-react";
 import Image from "next/image";
 
 const TutoringPage = () => {
@@ -297,8 +293,8 @@ const TutoringPage = () => {
               <div className="flex items-end justify-end">
                 <div className="bg-blue-100 rounded-lg rounded-br-none p-3 max-w-[80%]">
                   <p>
-                    I'm having trouble understanding photosynthesis. Could you
-                    explain the light-dependent reactions?
+                    I&apos;m having trouble understanding photosynthesis. Could
+                    you explain the light-dependent reactions?
                   </p>
                   <span className="text-xs text-gray-500 mt-1 block">
                     10:34 AM
