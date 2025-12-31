@@ -25,7 +25,7 @@ const navItems: NavItem[] = [
     icon: <BrainIcon size={20} />,
   },
   {
-    path: "/upload",
+    path: "/documents",
     label: "Uploads",
     icon: <UploadIcon size={20} />,
   },

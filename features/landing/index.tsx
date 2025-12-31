@@ -15,6 +15,7 @@ import { testimonials } from "./data/testimonial";
 import { features } from "./data/feature";
 import Header from "./components/header";
 import { useInView } from "@/hooks/useInView";
+
 const LandingPage = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const heroSlides = [

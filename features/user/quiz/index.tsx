@@ -1,231 +1,517 @@
 "use client";
-
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckIcon,
-  XIcon,
   ClockIcon,
-  AlertCircleIcon,
-  AlertTriangleIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  WifiOffIcon,
 } from "lucide-react";
+import formatTime from "@/utils/formatTime";
+import useNetworkStatus from "@/hooks/useNetworkStatus";
+import availableQuizzes from "./quizzes";
+import useQuiz from "@/hooks/useQuiz";
+import QuizCard from "./components/quizCard";
+import QuizReviewCard from "./components/quizReview";
+import ExitWarningModal from "./components/exitWarningModal";
+import QuizScreen from "./components/quizScreen";
 
 const QuizPage = () => {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
-  // Sample quiz data
-  const quizData = {
-    title: "Introduction to Biology",
-    questions: [
-      {
-        id: 1,
-        text: "Which of the following is NOT a characteristic of living organisms?",
-        options: [
-          "Growth and development",
-          "Response to stimuli",
-          "Ability to conduct electricity",
-          "Reproduction",
-        ],
-        correctAnswer: 2,
-        difficulty: "medium",
-      },
-      {
-        id: 2,
-        text: "What is the basic structural and functional unit of all living organisms?",
-        options: ["Cell", "Tissue", "Organ", "Molecule"],
-        correctAnswer: 0,
-        difficulty: "easy",
-      },
-      {
-        id: 3,
-        text: "Which organelle is responsible for protein synthesis in a cell?",
-        options: ["Mitochondria", "Ribosome", "Golgi apparatus", "Lysosome"],
-        correctAnswer: 1,
-        difficulty: "medium",
-      },
-      {
-        id: 4,
-        text: "What is the process by which plants convert light energy into chemical energy?",
-        options: [
-          "Respiration",
-          "Fermentation",
-          "Photosynthesis",
-          "Transpiration",
-        ],
-        correctAnswer: 2,
-        difficulty: "easy",
-      },
-      {
-        id: 5,
-        text: "Which of these is NOT a nucleotide found in DNA?",
-        options: ["Adenine", "Uracil", "Guanine", "Cytosine"],
-        correctAnswer: 1,
-        difficulty: "hard",
-      },
-    ],
+  const { isOnline, showNetworkWarning } = useNetworkStatus();
+  const {
+    answers,
+    currentQuestion,
+    endReason,
+    endQuiz,
+    exitCount,
+    selectedQuiz,
+    setAnswers,
+    setCurrentQuestion,
+    setQuizEnded,
+    setQuizStarted,
+    startQuiz,
+    quizStarted,
+    quizEnded,
+    timeRemaining,
+    setSelectedQuiz,
+    timeSpent,
+    showExitWarning,
+    setShowExitWarning,
+  } = useQuiz();
+
+  const calculateScore = () => {
+    if (!selectedQuiz)
+      return {
+        correct: 0,
+        wrong: 0,
+        skipped: 0,
+      };
+    let correct = 0;
+    let wrong = 0;
+    let skipped = 0;
+    answers.forEach((answer) => {
+      const question = selectedQuiz.questions.find(
+        (q) => q.id === answer.questionId
+      );
+      if (answer.selectedOption === null) {
+        skipped++;
+      } else if (question && answer.selectedOption === question.correctAnswer) {
+        correct++;
+      } else {
+        wrong++;
+      }
+    });
+    return {
+      correct,
+      wrong,
+      skipped,
+    };
   };
-  const currentQuizQuestion = quizData.questions[currentQuestion];
-  const isLastQuestion = currentQuestion === quizData.questions.length - 1;
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-100 text-green-700";
-      case "medium":
-        return "bg-amber-100 text-amber-700";
-      case "hard":
-        return "bg-red-100 text-red-700";
-      default:
-        return "bg-gray-100 text-gray-700";
-    }
+
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+  const { correct, wrong, skipped } = calculateScore();
+  const percentage = Math.round(
+    (correct / (selectedQuiz?.questions?.length ?? 1)) * 100
+  );
+  const passed = percentage >= 70;
+
+  const currentQ = selectedQuiz?.questions?.[currentQuestion];
+  const isLastQuestion =
+    currentQuestion === (selectedQuiz?.questions?.length ?? 0) - 1;
+  const answeredCount = answers.filter((a) => a.selectedOption !== null).length;
+
+  // Handle answer selection
+  const handleAnswerSelect = (optionIndex: number) => {
+    setAnswers((prev) =>
+      prev.map((answer) =>
+        answer.questionId === selectedQuiz!.questions[currentQuestion].id
+          ? {
+              ...answer,
+              selectedOption: optionIndex,
+            }
+          : answer
+      )
+    );
   };
-  const getDifficultyIcon = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return <CheckIcon size={16} />;
-      case "medium":
-        return <AlertCircleIcon size={16} />;
-      case "hard":
-        return <AlertTriangleIcon size={16} />;
-      default:
-        return null;
-    }
+  // Get current answer
+  const getCurrentAnswer = () => {
+    return answers.find(
+      (a) => a.questionId === selectedQuiz!.questions[currentQuestion].id
+    )?.selectedOption;
   };
-  const handleOptionSelect = (index: number) => {
-    if (!showFeedback) {
-      setSelectedOption(index);
-    }
+  // Navigate to question
+  const goToQuestion = (index: number) => {
+    setCurrentQuestion(index);
   };
-  const handleSubmit = () => {
-    if (selectedOption === null) return;
-    setShowFeedback(true);
-    if (selectedOption === currentQuizQuestion.correctAnswer) {
-      setCorrectAnswers((prev) => prev + 1);
-    }
+
+  // Calculate score
+
+  // Get question status
+  const getQuestionStatus = (index: number) => {
+    const answer = answers.find(
+      (a) => a.questionId === selectedQuiz!.questions[index].id
+    );
+    if (index === currentQuestion) return "current";
+    if (answer?.selectedOption !== null) return "answered";
+    return "unanswered";
   };
-  const handleNext = () => {
-    setSelectedOption(null);
-    setShowFeedback(false);
-    setCurrentQuestion((prev) => prev + 1);
-  };
+
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Quiz Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          {quizData.title}
-        </h1>
-        {/* Progress and Timer */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
-          <div className="flex items-center mb-3 sm:mb-0">
-            <span className="text-gray-700 mr-2">
-              Question {currentQuestion + 1}/{quizData.questions.length}
-            </span>
-            <div className="w-48 h-2 bg-gray-200 rounded-full">
-              <div
-                className="h-2 bg-blue-600 rounded-full"
-                style={{
-                  width: `${
-                    ((currentQuestion + 1) / quizData.questions.length) * 100
-                  }%`,
-                }}
-              ></div>
-            </div>
+    <>
+      {!quizStarted && !quizEnded && (
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              Available Quizzes
+            </h1>
+            <p className="text-gray-600">
+              Select a quiz to begin your practice test
+            </p>
           </div>
-          <div className="flex items-center text-gray-700">
-            <ClockIcon size={18} className="mr-1.5" />
-            <span>Time remaining: 2:45</span>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {availableQuizzes?.map((quiz, index) => (
+              <QuizCard
+                quiz={quiz}
+                index={index}
+                key={quiz.id}
+                handleStartQuiz={startQuiz}
+              />
+            ))}
           </div>
         </div>
-        {/* Difficulty Badge */}
-        <div
-          className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${getDifficultyColor(
-            currentQuizQuestion.difficulty
-          )}`}
-        >
-          {getDifficultyIcon(currentQuizQuestion.difficulty)}
-          <span className="ml-1 capitalize">
-            {currentQuizQuestion.difficulty}
-          </span>
-        </div>
-      </div>
-      {/* Question and Options */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <h2 className="text-xl font-medium text-gray-800 mb-5">
-          {currentQuizQuestion.text}
-        </h2>
-        <div className="space-y-3">
-          {currentQuizQuestion.options.map((option, index) => (
-            <div
-              key={index}
-              onClick={() => handleOptionSelect(index)}
-              className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                selectedOption === index
-                  ? showFeedback
-                    ? index === currentQuizQuestion.correctAnswer
-                      ? "border-green-500 bg-green-50"
-                      : "border-red-500 bg-red-50"
-                    : "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-              }`}
-            >
-              <div className="flex items-center">
-                <div
-                  className={`w-6 h-6 flex items-center justify-center rounded-full mr-3 ${
-                    selectedOption === index
-                      ? showFeedback
-                        ? index === currentQuizQuestion.correctAnswer
-                          ? "bg-green-500 text-white"
-                          : "bg-red-500 text-white"
-                        : "bg-blue-500 text-white"
-                      : "border border-gray-300 text-gray-500"
-                  }`}
-                >
-                  {showFeedback && selectedOption === index ? (
-                    index === currentQuizQuestion.correctAnswer ? (
-                      <CheckIcon size={16} />
-                    ) : (
-                      <XIcon size={16} />
-                    )
-                  ) : (
-                    <span>{String.fromCharCode(65 + index)}</span>
-                  )}
+      )}
+      {quizEnded && selectedQuiz && (
+        <>
+          {showReview && (
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Question Review
+                  </h2>
+                  <button
+                    onClick={() => setShowReview(false)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Back to Summary
+                  </button>
                 </div>
-                <span className="text-gray-800">{option}</span>
+              </div>
+
+              <div className="space-y-4">
+                {selectedQuiz.questions.map((question, index) => {
+                  const userAnswer = answers.find(
+                    (a) => a.questionId === question.id
+                  );
+                  const isCorrect =
+                    userAnswer?.selectedOption === question.correctAnswer;
+                  const isSkipped = userAnswer?.selectedOption === null;
+                  return (
+                    <QuizReviewCard
+                      key={question.id}
+                      index={index}
+                      question={question}
+                      userAnswer={userAnswer}
+                      isSkipped={isSkipped}
+                      isCorrect={isCorrect}
+                    />
+                  );
+                })}
+              </div>
+
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => {
+                    setQuizStarted(false);
+                    setQuizEnded(false);
+                    setSelectedQuiz(null);
+                    setShowReview(false);
+                  }}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
+                  Back to Quiz Selection
+                </button>
               </div>
             </div>
-          ))}
+          )}
+          {!showReview && (
+            <div className="max-w-3xl mx-auto">
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  scale: 0.95,
+                }}
+                animate={{
+                  opacity: 1,
+                  scale: 1,
+                }}
+                className="bg-white rounded-xl shadow-lg border border-gray-200 p-8"
+              >
+                <div className="text-center mb-8">
+                  <div
+                    className={`mx-auto w-24 h-24 rounded-full flex items-center justify-center mb-6 ${
+                      passed ? "bg-green-100" : "bg-red-100"
+                    }`}
+                  >
+                    {passed ? (
+                      <CheckCircleIcon size={48} className="text-green-600" />
+                    ) : (
+                      <XCircleIcon size={48} className="text-red-600" />
+                    )}
+                  </div>
+
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                    {passed ? "Congratulations!" : "Quiz Completed"}
+                  </h2>
+
+                  {endReason === "timeout" && (
+                    <p className="text-red-600 mb-2">
+                      Time expired - Quiz auto-submitted
+                    </p>
+                  )}
+                  {endReason === "violations" && (
+                    <p className="text-red-600 mb-2">
+                      Quiz ended due to multiple integrity violations
+                    </p>
+                  )}
+
+                  <div className="bg-gray-50 rounded-xl p-8 mb-6">
+                    <div className="text-6xl font-bold text-gray-800 mb-2">
+                      {percentage}%
+                    </div>
+                    <p className="text-lg text-gray-600">
+                      {correct} out of {selectedQuiz.questions.length} correct
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-green-600 mb-1">
+                      {correct}
+                    </div>
+                    <div className="text-sm text-green-700">Correct</div>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-red-600 mb-1">
+                      {wrong}
+                    </div>
+                    <div className="text-sm text-red-700">Wrong</div>
+                  </div>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-gray-600 mb-1">
+                      {skipped}
+                    </div>
+                    <div className="text-sm text-gray-700">Skipped</div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Time Spent</p>
+                      <p className="text-lg font-semibold text-gray-800">
+                        {formatTime(timeSpent)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Status</p>
+                      <p
+                        className={`text-lg font-semibold ${
+                          passed ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {passed ? "Passed" : "Failed"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowReview(true);
+                    }}
+                    className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Review Answers
+                  </button>
+                  <button
+                    onClick={() => {
+                      setQuizStarted(false);
+                      setQuizEnded(false);
+                      setSelectedQuiz(null);
+                    }}
+                    className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Back to Quizzes
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </>
+      )}
+
+      {selectedQuiz && !quizEnded && (
+        <div
+          className=" bg-gray-50 select-none"
+          style={{
+            userSelect: "none",
+          }}
+        >
+          {/* Network Warning Banner */}
+          <AnimatePresence>
+            {showNetworkWarning && (
+              <motion.div
+                initial={{
+                  y: -100,
+                }}
+                animate={{
+                  y: 0,
+                }}
+                exit={{
+                  y: -100,
+                }}
+                className=" bg-red-600 text-white py-3 px-4 z-50 shadow-lg"
+              >
+                <div className="max-w-7xl mx-auto flex items-center justify-center space-x-3">
+                  <WifiOffIcon size={20} />
+                  <span className="font-medium">
+                    Connection lost. Your answers are being saved locally.
+                  </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Fixed Top Bar */}
+          <div
+            className={`bg-white border-b-2 border-green-600 shadow-sm z-40 `}
+          >
+            <div className="max-w-7xl mx-auto px-4 py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-lg font-bold text-gray-800">
+                    {selectedQuiz?.title}
+                  </h1>
+                  <p className="text-sm text-gray-600">
+                    {selectedQuiz?.subject}
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-6">
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Progress</div>
+                    <div className="font-bold text-gray-800">
+                      {currentQuestion + 1} / {selectedQuiz?.questions.length}
+                    </div>
+                  </div>
+
+                  <div
+                    className={`text-center px-4 py-2 rounded-lg ${
+                      timeRemaining <= 60
+                        ? "bg-red-100 border-2 border-red-500 animate-pulse"
+                        : timeRemaining <= 300
+                        ? "bg-amber-100 border-2 border-amber-500"
+                        : "bg-green-100"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <ClockIcon
+                        size={18}
+                        className={
+                          timeRemaining <= 60
+                            ? "text-red-600"
+                            : timeRemaining <= 300
+                            ? "text-amber-600"
+                            : "text-green-600"
+                        }
+                      />
+                      <div
+                        className={`text-xl font-bold ${
+                          timeRemaining <= 60
+                            ? "text-red-600"
+                            : timeRemaining <= 300
+                            ? "text-amber-600"
+                            : "text-green-600"
+                        }`}
+                      >
+                        {formatTime(timeRemaining)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
+
+          <QuizScreen
+            showNetworkWarning={showNetworkWarning}
+            currentQ={currentQ}
+            currentQuestion={currentQuestion}
+            getCurrentAnswer={getCurrentAnswer}
+            goToQuestion={goToQuestion}
+            setShowSubmitConfirm={setShowSubmitConfirm}
+            isLastQuestion={isLastQuestion}
+            isOnline={isOnline}
+            answeredCount={answeredCount}
+            selectedQuiz={selectedQuiz}
+            getQuestionStatus={getQuestionStatus}
+            handleAnswerSelect={handleAnswerSelect}
+          />
+
+          {/* Exit Warning Modal */}
+          <AnimatePresence>
+            {showExitWarning && (
+              <ExitWarningModal
+                exitCount={exitCount}
+                setShowExitWarning={setShowExitWarning}
+              />
+            )}
+          </AnimatePresence>
+
+          {/* Submit Confirmation Modal */}
+          <AnimatePresence>
+            {showSubmitConfirm && (
+              <motion.div
+                initial={{
+                  opacity: 0,
+                }}
+                animate={{
+                  opacity: 1,
+                }}
+                exit={{
+                  opacity: 0,
+                }}
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+              >
+                <motion.div
+                  initial={{
+                    scale: 0.9,
+                  }}
+                  animate={{
+                    scale: 1,
+                  }}
+                  exit={{
+                    scale: 0.9,
+                  }}
+                  className="bg-white rounded-xl p-8 max-w-md w-full"
+                >
+                  <div className="text-center">
+                    <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                      <CheckCircleIcon size={32} className="text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">
+                      Submit Quiz?
+                    </h3>
+                    <p className="text-gray-600 mb-2">
+                      You have answered {answeredCount} out of{" "}
+                      {selectedQuiz?.questions.length} questions.
+                    </p>
+                    {answeredCount < (selectedQuiz?.questions?.length ?? 0) && (
+                      <p className="text-sm text-amber-600 mb-4">
+                        ⚠️{" "}
+                        {(selectedQuiz?.questions?.length ?? 0) - answeredCount}{" "}
+                        question(s) remain unanswered.
+                      </p>
+                    )}
+                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                      <p className="text-sm text-gray-600">
+                        Once submitted, you cannot change your answers.
+                      </p>
+                    </div>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => setShowSubmitConfirm(false)}
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                      >
+                        Review Answers
+                      </button>
+                      <button
+                        onClick={() => {
+                          endQuiz("submitted");
+                          setShowSubmitConfirm(false);
+                          setQuizEnded(true);
+                        }}
+                        className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                      >
+                        Submit Now
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-      </div>
-      {/* Submit/Next Button */}
-      <div className="flex justify-end">
-        {showFeedback ? (
-          <button
-            onClick={handleNext}
-            disabled={isLastQuestion}
-            className={`px-6 py-2.5 rounded-lg font-medium ${
-              isLastQuestion
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                : "bg-blue-600 text-white hover:bg-blue-700"
-            }`}
-          >
-            {isLastQuestion ? "Finish Quiz" : "Next Question"}
-          </button>
-        ) : (
-          <button
-            onClick={handleSubmit}
-            disabled={selectedOption === null}
-            className={`px-6 py-2.5 rounded-lg font-medium ${
-              selectedOption === null
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                : "bg-blue-600 text-white hover:bg-blue-700"
-            }`}
-          >
-            Submit Answer
-          </button>
-        )}
-      </div>
-    </div>
+      )}
+    </>
   );
 };
+
 export default QuizPage;

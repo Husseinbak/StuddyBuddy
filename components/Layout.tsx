@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -27,7 +28,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       icon: <BrainIcon size={20} />,
     },
     {
-      path: "/upload",
+      path: "/documents",
       label: "Uploads",
       icon: <UploadIcon size={20} />,
     },

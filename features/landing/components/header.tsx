@@ -39,7 +39,7 @@ const Header = ({ heroInView }: { heroInView: boolean }) => {
             Sign in
           </Link>
           <Link
-            href="/dashboard"
+            href="/sign-up"
             className="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
           >
             Get Started
