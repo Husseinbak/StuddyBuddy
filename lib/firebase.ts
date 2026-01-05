@@ -4,12 +4,12 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+  apiKey: "AIzaSyBtiGoM1YADTRPnDGyBgDbdAGUliJX0gmw",
+  authDomain: "study-buddy-437bc.firebaseapp.com",
+  projectId: "study-buddy-437bc",
+  storageBucket: "study-buddy-437bc.firebasestorage.app",
+  messagingSenderId: "894173809878",
+  appId: "1:894173809878:web:b516748367da9ccb8ccd77",
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
