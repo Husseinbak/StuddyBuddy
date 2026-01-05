@@ -5,10 +5,13 @@ import { motion } from "framer-motion";
 import { EyeIcon, EyeOffIcon, ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getEmailByUsername } from "@/lib/firestore";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -16,11 +19,53 @@ const LoginPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+
+    try {
+      let email = identifier.trim().toLowerCase();
+
+      // If user typed username, resolve it to email
+      if (!email.includes("@")) {
+        const resolvedEmail = await getEmailByUsername(email);
+
+        if (!resolvedEmail) {
+          throw new Error("USER_NOT_FOUND");
+        }
+
+        email = resolvedEmail;
+      }
+
+      await signInWithEmailAndPassword(auth, email, password);
+
       router.push("/dashboard");
-    }, 1500);
+    } catch (err: any) {
+      // Firebase error handling
+      switch (err.code || err.message) {
+        case "auth/user-not-found":
+        case "USER_NOT_FOUND":
+          alert("No account found with that email or username.");
+          break;
+
+        case "auth/wrong-password":
+          alert("Incorrect password.");
+          break;
+
+        case "auth/too-many-requests":
+          alert("Too many attempts. Try again later.");
+          break;
+
+        case "auth/invalid-email":
+          alert("Invalid email address.");
+          break;
+
+        default:
+          alert("Login failed. Please try again.");
+          console.error(err);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
+
   return (
     <div className="max-w-md w-full">
       <div className="text-center mb-8">
@@ -49,10 +94,10 @@ const LoginPage = () => {
               }}
               id="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none bg-white"
-              placeholder="Enter your username"
+              placeholder="Enter your username or email"
               required
             />
           </div>

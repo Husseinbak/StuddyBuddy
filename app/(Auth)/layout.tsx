@@ -27,7 +27,7 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
             <div className="bg-white text-blue-600 p-2 rounded-lg shadow-lg">
               <BrainIcon size={28} />
             </div>
-            <span className="text-2xl font-bold text-white">SmartStudy</span>
+            <span className="text-2xl font-bold text-white">StuddyBuddy</span>
           </Link>
         </div>
       </div>

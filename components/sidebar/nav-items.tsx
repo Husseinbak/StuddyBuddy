@@ -20,18 +20,18 @@ const navItems: NavItem[] = [
     icon: <BookOpenIcon size={20} />,
   },
   {
+    path: "/documents",
+    label: "Documents",
+    icon: <UploadIcon size={20} />,
+  },
+  {
     path: "/quiz",
     label: "Quizzes",
     icon: <BrainIcon size={20} />,
   },
   {
-    path: "/documents",
-    label: "Uploads",
-    icon: <UploadIcon size={20} />,
-  },
-  {
-    path: "/tutoring",
-    label: "Tutoring",
+    path: "/peer-learning",
+    label: "Learning",
     icon: <UsersIcon size={20} />,
   },
   {

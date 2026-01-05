@@ -4,8 +4,13 @@ import { motion } from "framer-motion";
 import { EyeIcon, EyeOffIcon, ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { createUserProfile, isUsernameTaken } from "@/lib/firestore";
+
 const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     surname: "",
@@ -15,9 +20,11 @@ const SignupPage = () => {
     courseOfStudy: "",
     password: "",
     confirmPassword: "",
+    email: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -26,6 +33,7 @@ const SignupPage = () => {
       [e.target.name]: e.target.value,
     });
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
@@ -33,11 +41,36 @@ const SignupPage = () => {
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      if (await isUsernameTaken(formData.username)) {
+        throw new Error("Username already taken");
+      }
+
+      const cred = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      await createUserProfile(cred.user.uid, {
+        email: formData.email,
+        username: formData.username.toLowerCase(),
+        firstName: formData.firstName,
+        surname: formData.surname,
+        middleName: formData.middleName || null,
+        institution: formData.institution,
+        courseOfStudy: formData.courseOfStudy,
+        createdAt: new Date(),
+      });
+
       router.push("/dashboard");
-    }, 1500);
+    } catch (err: any) {
+      alert(err.message || "Signup failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
   return (
     <div className="w-full max-w-2xl relative z-10">
       {/* Logo and header */}
@@ -200,6 +233,30 @@ const SignupPage = () => {
           {/* Username */}
           <div>
             <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Email <span className="text-red-500">*</span>
+            </label>
+            <motion.input
+              whileFocus={{
+                scale: 1.01,
+              }}
+              transition={{
+                duration: 0.2,
+              }}
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none bg-white"
+              placeholder="johndoe@gmail.com"
+              required
+            />
+          </div>
+          <div>
+            <label
               htmlFor="username"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
@@ -270,22 +327,35 @@ const SignupPage = () => {
               >
                 Confirm Password <span className="text-red-500">*</span>
               </label>
-              <motion.input
-                whileFocus={{
-                  scale: 1.01,
-                }}
-                transition={{
-                  duration: 0.2,
-                }}
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none bg-white"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <motion.input
+                  whileFocus={{
+                    scale: 1.01,
+                  }}
+                  transition={{
+                    duration: 0.2,
+                  }}
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none bg-white"
+                  placeholder="••••••••"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOffIcon size={20} />
+                  ) : (
+                    <EyeIcon size={20} />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
           {/* Terms and conditions */}
@@ -416,7 +486,7 @@ const SignupPage = () => {
       >
         Already have an account?{" "}
         <Link
-          href="/login"
+          href="/sign-in"
           className="text-blue-200 hover:text-white font-medium transition-colors"
         >
           Sign in
