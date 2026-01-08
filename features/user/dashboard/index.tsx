@@ -14,7 +14,7 @@ const Dashboard = () => {
       description: "Upload your study materials for AI analysis",
       icon: <UploadIcon size={24} />,
       color: "bg-blue-100 text-blue-600",
-      link: "/upload",
+      link: "/documents",
     },
     {
       title: "Start Quiz",
@@ -28,7 +28,7 @@ const Dashboard = () => {
       description: "Connect with peers for collaborative learning",
       icon: <UsersIcon size={24} />,
       color: "bg-purple-100 text-purple-600",
-      link: "/tutoring",
+      link: "/peer-learning",
     },
     {
       title: "View Analytics",
