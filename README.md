@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Study Buddy – Frontend
 
-## Getting Started
+Study Buddy is an AI-powered quiz platform that helps students generate and practice multiple-choice questions from their course materials.  
+This repository contains the **frontend application**, delivering an interactive and analytics-driven learning experience.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Overview
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The Study Buddy frontend provides AI-generated quizzes from uploaded materials, three difficulty levels, weekly leaderboard-level challenges, detailed performance analytics, course-based quiz management, and smart attempt tracking with structured restrictions.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+It connects to the backend API for authentication, quiz generation, submissions, reporting, and leaderboard management.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🧠 Core Features
 
-To learn more about Next.js, take a look at the following resources:
+### AI Quiz Generation
+Users can upload course materials and automatically generate MCQs categorized by difficulty level.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Difficulty Levels
+Quizzes are structured into Easy, Medium, and Hard levels. Attempt limits are enforced per level to encourage progressive mastery, and users are limited to **three quiz sets per difficulty per course**.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+### 🏆 Leaderboard-Level Quiz
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Each course includes a fixed-question leaderboard quiz available once per week. Only one leaderboard quiz exists per course, and rankings are based strictly on first-attempt scores. The top 20 scores are displayed for competitive ranking.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+### 📊 Performance Reports
+
+Each course provides analytics per difficulty level, including total attempts, average score, highest score, overall success rate, total time spent, first attempt versus most recent attempt comparison, improvement rate, and number of completed quizzes.
+
+---
+
+## 🏗 Tech Stack
+
+- React / Next.js  
+- TypeScript   
+- ReactQuery
+- Axios  
+  
