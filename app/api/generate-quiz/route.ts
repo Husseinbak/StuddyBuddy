@@ -144,7 +144,7 @@ ${documentText.slice(0, 30000)}
     const questionsList = parsed.questions || parsed.quizzes?.[0]?.questions || [];
 
     const formattedQuestions = questionsList.map((q: any, idx: number) => {
-      let qType = q.type || (Array.isArray(q.options) && q.options.length === 2 ? "true_false" : "multiple_choice");
+      const qType = q.type || (Array.isArray(q.options) && q.options.length === 2 ? "true_false" : "multiple_choice");
       if (qType === "short_answer") {
         return {
           id: idx + 1,
