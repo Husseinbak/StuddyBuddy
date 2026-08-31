@@ -83,7 +83,7 @@ const Dashboard = () => {
             track your progress all in one place.
           </p>
           <Link
-            href="/upload"
+            href="/documents"
             className="inline-flex items-center bg-white text-blue-600 px-5 py-2.5 rounded-lg font-medium hover:bg-blue-50 transition-colors"
           >
             Get Started

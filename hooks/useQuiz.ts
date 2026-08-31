@@ -18,6 +18,7 @@ function useQuiz() {
     const initialAnswers: Answer[] = quiz.questions.map((q) => ({
       questionId: q.id,
       selectedOption: null,
+      textAnswer: "",
     }));
     setAnswers(initialAnswers);
     // Load from localStorage if available
@@ -39,6 +40,7 @@ function useQuiz() {
     setQuizStarted(true);
     setCurrentQuestion(0);
     setExitCount(0);
+    setQuizEnded(false);
   };
 
   const selectAnswer = (questionId: number, option: number) => {
@@ -49,9 +51,18 @@ function useQuiz() {
     );
   };
 
+  const updateTextAnswer = (questionId: number, text: string) => {
+    setAnswers((prev) =>
+      prev.map((a) =>
+        a.questionId === questionId ? { ...a, textAnswer: text } : a
+      )
+    );
+  };
+
   const handleTimeOut = () => {
     endQuiz("timeout");
   };
+
   // End quiz
   const endQuiz = (reason: EndReason) => {
     setEndReason(reason);
@@ -145,6 +156,7 @@ function useQuiz() {
     endReason,
     startQuiz,
     selectAnswer,
+    updateTextAnswer,
     setAnswers,
     setCurrentQuestion,
     endQuiz,

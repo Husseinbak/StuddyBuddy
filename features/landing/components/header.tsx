@@ -18,12 +18,12 @@ const Header = ({ heroInView }: { heroInView: boolean }) => {
               heroInView ? "text-white" : "text-gray-600"
             }`}
           >
-            SmartStudy
+            StuddyBuddy
           </span>
         </div>
         <div className="flex items-center space-x-6">
           <Link
-            href="/dashboard"
+            href="#features"
             className={`font-medium ${
               heroInView ? "text-white" : "text-gray-600 hover:text-gray-800"
             }`}

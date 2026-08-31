@@ -9,10 +9,10 @@ const Footer = () => {
             <div className="bg-blue-600 text-white p-2 rounded-lg">
               <BrainIcon size={24} />
             </div>
-            <span className="text-xl font-bold">SmartStudy</span>
+            <span className="text-xl font-bold">StuddyBuddy</span>
           </div>
           <div className="text-gray-400 text-sm">
-            © 2023 SmartStudy. All rights reserved.
+            © {new Date().getFullYear()} StuddyBuddy. All rights reserved.
           </div>
         </div>
       </div>

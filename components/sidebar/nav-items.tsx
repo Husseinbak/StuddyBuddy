@@ -5,6 +5,7 @@ import {
   UsersIcon,
   BarChartIcon,
   TrophyIcon,
+  SettingsIcon,
 } from "lucide-react";
 
 interface NavItem {
@@ -43,6 +44,11 @@ const navItems: NavItem[] = [
     path: "/leaderboard",
     label: "Leaderboard",
     icon: <TrophyIcon size={20} />,
+  },
+  {
+    path: "/settings",
+    label: "Settings",
+    icon: <SettingsIcon size={20} />,
   },
 ];
 

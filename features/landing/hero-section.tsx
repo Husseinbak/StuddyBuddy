@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Image1 from "@/app/assets/images/image-1.jpg";
+import Image1 from "@/assets/images/image-1.jpg";
 
 const HeroSection = () => {
   return (

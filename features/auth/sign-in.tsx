@@ -6,8 +6,14 @@ import { EyeIcon, EyeOffIcon, ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getEmailByUsername } from "@/lib/firestore";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { toast } from "sonner";
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -35,31 +41,67 @@ const LoginPage = () => {
       }
 
       await signInWithEmailAndPassword(auth, email, password);
-
+      toast.success("Welcome back! Signed in successfully.");
       router.push("/dashboard");
     } catch (err: any) {
       // Firebase error handling
       switch (err.code || err.message) {
         case "auth/user-not-found":
         case "USER_NOT_FOUND":
-          alert("No account found with that email or username.");
+          toast.error("No account found with that email or username.");
           break;
 
         case "auth/wrong-password":
-          alert("Incorrect password.");
+        case "auth/invalid-credential":
+          toast.error("Incorrect password or credentials.");
           break;
 
         case "auth/too-many-requests":
-          alert("Too many attempts. Try again later.");
+          toast.error("Too many attempts. Please try again later.");
           break;
 
         case "auth/invalid-email":
-          alert("Invalid email address.");
+          toast.error("Invalid email address format.");
           break;
 
         default:
-          alert("Login failed. Please try again.");
+          toast.error("Login failed. Please verify your credentials.");
           console.error(err);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+      const userRef = doc(db, "users", res.user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        const nameParts = (res.user.displayName || "Student").split(" ");
+        await setDoc(userRef, {
+          email: res.user.email,
+          username: (res.user.displayName || "student")
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "_"),
+          firstName: nameParts[0] || "Student",
+          surname: nameParts.slice(1).join(" ") || "",
+          institution: "University",
+          courseOfStudy: "General Studies",
+          createdAt: new Date(),
+        });
+      }
+
+      toast.success(`Signed in as ${res.user.displayName || res.user.email}`);
+      router.push("/dashboard");
+    } catch (err: any) {
+      if (err.code !== "auth/popup-closed-by-user") {
+        console.error("Google sign-in error:", err);
+        toast.error(err.message || "Google sign-in failed");
       }
     } finally {
       setIsLoading(false);
@@ -68,40 +110,44 @@ const LoginPage = () => {
 
   return (
     <div className="max-w-md w-full">
+      {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
         <p className="text-blue-100">
-          Sign in to continue your learning journey
+          Sign in to access your quizzes and learning analytics
         </p>
       </div>
+
       {/* Login card */}
-      <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.1 }}
+        className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 border border-white/20"
+      >
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Username field */}
+          {/* Email or username */}
           <div>
             <label
-              htmlFor="username"
+              htmlFor="identifier"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Username
+              Email or Username
             </label>
             <motion.input
-              whileFocus={{
-                scale: 1.01,
-              }}
-              transition={{
-                duration: 0.2,
-              }}
-              id="username"
+              whileFocus={{ scale: 1.01 }}
+              transition={{ duration: 0.2 }}
+              id="identifier"
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none bg-white"
-              placeholder="Enter your username or email"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none bg-white text-gray-900"
+              placeholder="name@example.com or username"
               required
             />
           </div>
-          {/* Password field */}
+
+          {/* Password */}
           <div>
             <label
               htmlFor="password"
@@ -111,18 +157,14 @@ const LoginPage = () => {
             </label>
             <div className="relative">
               <motion.input
-                whileFocus={{
-                  scale: 1.01,
-                }}
-                transition={{
-                  duration: 0.2,
-                }}
+                whileFocus={{ scale: 1.01 }}
+                transition={{ duration: 0.2 }}
                 id="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none bg-white"
-                placeholder="Enter your password"
+                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none bg-white text-gray-900"
+                placeholder="••••••••"
                 required
               />
               <button
@@ -130,47 +172,38 @@ const LoginPage = () => {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
               >
-                {showPassword ? (
-                  <EyeOffIcon size={20} />
-                ) : (
-                  <EyeIcon size={20} />
-                )}
+                {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
               </button>
             </div>
           </div>
+
           {/* Remember me and forgot password */}
-          <div className="flex items-center justify-between">
-            <label className="flex items-center">
+          <div className="flex items-center justify-between text-sm">
+            <label className="flex items-center text-gray-600">
               <input
                 type="checkbox"
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 mr-2"
               />
-              <span className="ml-2 text-sm text-gray-600">Remember me</span>
+              Remember me
             </label>
             <Link
               href="/forgot-password"
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+              className="text-blue-600 hover:text-blue-700 font-medium"
             >
               Forgot password?
             </Link>
           </div>
+
           {/* Submit button */}
           <motion.button
-            whileHover={{
-              scale: 1.02,
-            }}
-            whileTap={{
-              scale: 0.98,
-            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/30 flex items-center justify-center space-x-2 disabled:opacity-50"
           >
             {isLoading ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Signing in...</span>
-              </div>
+              <span>Signing in...</span>
             ) : (
               <>
                 <span>Sign in</span>
@@ -179,6 +212,7 @@ const LoginPage = () => {
             )}
           </motion.button>
         </form>
+
         {/* Divider */}
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
@@ -190,17 +224,16 @@ const LoginPage = () => {
             </span>
           </div>
         </div>
+
         {/* Social login buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div>
           <motion.button
-            whileHover={{
-              scale: 1.02,
-            }}
-            whileTap={{
-              scale: 0.98,
-            }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             type="button"
-            className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white shadow-xs text-sm font-medium text-gray-700"
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path
@@ -220,47 +253,22 @@ const LoginPage = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            <span className="text-sm font-medium text-gray-700">Google</span>
-          </motion.button>
-          <motion.button
-            whileHover={{
-              scale: 1.02,
-            }}
-            whileTap={{
-              scale: 0.98,
-            }}
-            type="button"
-            className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-            </svg>
-            <span className="text-sm font-medium text-gray-700">GitHub</span>
+            <span>Continue with Google</span>
           </motion.button>
         </div>
-      </div>
+      </motion.div>
+
       {/* Sign up link */}
       <motion.p
-        initial={{
-          opacity: 0,
-        }}
-        animate={{
-          opacity: 1,
-        }}
-        transition={{
-          duration: 0.6,
-          delay: 0.3,
-        }}
-        className="text-center mt-6 text-white"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+        className="text-center mt-6 text-white text-sm"
       >
-        Don&apos;t have an account?
+        Don&apos;t have an account?{" "}
         <Link
           href="/sign-up"
-          className="text-blue-200 hover:text-white font-medium transition-colors"
+          className="text-blue-200 hover:text-white font-semibold underline underline-offset-2 ml-1"
         >
           Sign up
         </Link>
@@ -268,4 +276,5 @@ const LoginPage = () => {
     </div>
   );
 };
+
 export default LoginPage;

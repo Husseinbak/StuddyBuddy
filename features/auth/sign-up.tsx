@@ -4,9 +4,15 @@ import { motion } from "framer-motion";
 import { EyeIcon, EyeOffIcon, ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import {
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
 import { createUserProfile, isUsernameTaken } from "@/lib/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { toast } from "sonner";
 
 const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -34,16 +40,54 @@ const SignupPage = () => {
     });
   };
 
+  const handleGoogleSignUp = async () => {
+    setIsLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const res = await signInWithPopup(auth, provider);
+      const userRef = doc(db, "users", res.user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        const nameParts = (res.user.displayName || "Student").split(" ");
+        await createUserProfile(res.user.uid, {
+          email: res.user.email,
+          username: (res.user.displayName || "student")
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, "_"),
+          firstName: nameParts[0] || "Student",
+          surname: nameParts.slice(1).join(" ") || "",
+          middleName: null,
+          institution: "University",
+          courseOfStudy: "General Studies",
+          createdAt: new Date(),
+        });
+      }
+
+      toast.success("Account created successfully with Google!");
+      router.push("/dashboard");
+    } catch (err: any) {
+      if (err.code !== "auth/popup-closed-by-user") {
+        console.error("Google sign-up error:", err);
+        toast.error(err.message || "Google sign-up failed");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords don't match!");
+      toast.error("Passwords don't match! Please re-type your password.");
       return;
     }
     setIsLoading(true);
     try {
       if (await isUsernameTaken(formData.username)) {
-        throw new Error("Username already taken");
+        toast.error("That username is already taken. Please choose another.");
+        setIsLoading(false);
+        return;
       }
 
       const cred = await createUserWithEmailAndPassword(
@@ -63,9 +107,10 @@ const SignupPage = () => {
         createdAt: new Date(),
       });
 
+      toast.success("Account created successfully! Welcome to StuddyBuddy.");
       router.push("/dashboard");
     } catch (err: any) {
-      alert(err.message || "Signup failed");
+      toast.error(err.message || "Signup failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -418,7 +463,7 @@ const SignupPage = () => {
           </div>
         </div>
         {/* Social signup buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        <div>
           <motion.button
             whileHover={{
               scale: 1.02,
@@ -427,7 +472,9 @@ const SignupPage = () => {
               scale: 0.98,
             }}
             type="button"
-            className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
+            onClick={handleGoogleSignUp}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white shadow-xs text-sm font-medium text-gray-700 disabled:opacity-50"
           >
             <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
               <path
@@ -447,26 +494,7 @@ const SignupPage = () => {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            <span className="text-sm font-medium text-gray-700">Google</span>
-          </motion.button>
-          <motion.button
-            whileHover={{
-              scale: 1.02,
-            }}
-            whileTap={{
-              scale: 0.98,
-            }}
-            type="button"
-            className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors bg-white"
-          >
-            <svg
-              className="w-5 h-5 mr-2"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
-            </svg>
-            <span className="text-sm font-medium text-gray-700">GitHub</span>
+            <span>Sign up with Google</span>
           </motion.button>
         </div>
       </motion.div>
